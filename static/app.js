@@ -48,7 +48,7 @@ function setupEventListeners() {
         }
     });
 
-    // Watchlist
+    // Watchlist management
     clearWatchlistBtn.addEventListener('click', clearWatchlist);
 
     // Filter buttons
