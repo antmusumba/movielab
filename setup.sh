@@ -26,7 +26,14 @@ if [ -z "$OMDB_API_KEY" ]; then
     exit 1
 fi
 
-echo "✅ API keys are configured"
+if [ -z "$YOUTUBE_API_KEY" ]; then
+    echo "❌ YOUTUBE_API_KEY is not set"
+    echo "Please get your API key from: https://console.developers.google.com/ (YouTube Data API v3)"
+    echo "Then run: export YOUTUBE_API_KEY=your_api_key_here"
+    exit 1
+fi
+
+echo "✅ All API keys are configured"
 
 # Install dependencies
 echo "📦 Installing Go dependencies..."
