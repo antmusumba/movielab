@@ -7,6 +7,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
 	"strconv"
 	"time"
@@ -68,18 +69,23 @@ var (
 	db         *sql.DB
 	tmdbAPIKey string
 	omdbAPIKey string
+	youtubeAPIKey string
 )
 
 // init loads API keys from environment variables
 func init() {
 	tmdbAPIKey = os.Getenv("TMDB_API_KEY")
 	omdbAPIKey = os.Getenv("OMDB_API_KEY")
+	youtubeAPIKey = os.Getenv("YOUTUBE_API_KEY")
 
 	if tmdbAPIKey == "" {
 		log.Fatal("TMDB_API_KEY environment variable is required")
 	}
 	if omdbAPIKey == "" {
 		log.Fatal("OMDB_API_KEY environment variable is required")
+	}
+	if youtubeAPIKey == "" {
+		log.Fatal("YOUTUBE_API_KEY environment variable is required")
 	}
 }
 
@@ -129,6 +135,8 @@ func main() {
 	r.HandleFunc("/api/watchlist", watchlistHandler).Methods("GET", "POST", "DELETE")
 	r.HandleFunc("/api/watchlist/{id}", watchlistItemHandler).Methods("PUT", "DELETE")
 	r.HandleFunc("/api/recommendations", recommendationsHandler).Methods("GET")
+	r.HandleFunc("/api/trailer", youtubeTrailerHandler).Methods("GET")
+	r.HandleFunc("/api/trending-trailers", trendingTrailersHandler).Methods("GET")
 
 	// Serve static files
 	r.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
@@ -488,4 +496,102 @@ func recommendationsHandler(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(movies)
+}
+
+// youtubeTrailerHandler searches YouTube for the official trailer and returns the videoId
+func youtubeTrailerHandler(w http.ResponseWriter, r *http.Request) {
+	title := r.URL.Query().Get("title")
+	year := r.URL.Query().Get("year")
+	if title == "" {
+		http.Error(w, "title is required", http.StatusBadRequest)
+		return
+	}
+	query := fmt.Sprintf("%s %s official trailer", title, year)
+	apiKey := youtubeAPIKey
+	ytURL := fmt.Sprintf("https://www.googleapis.com/youtube/v3/search?part=snippet&q=%s&type=video&key=%s&maxResults=1", url.QueryEscape(query), apiKey)
+	resp, err := http.Get(ytURL)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	defer resp.Body.Close()
+	var ytResp map[string]interface{}
+	if err := json.NewDecoder(resp.Body).Decode(&ytResp); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	items, ok := ytResp["items"].([]interface{})
+	if !ok || len(items) == 0 {
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
+	id, ok := items[0].(map[string]interface{})["id"].(map[string]interface{})["videoId"].(string)
+	if !ok {
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
+	json.NewEncoder(w).Encode(map[string]string{"videoId": id})
+}
+
+// trendingTrailersHandler returns the top 4 trending movies with their YouTube trailer videoIds
+func trendingTrailersHandler(w http.ResponseWriter, r *http.Request) {
+	// Fetch trending movies from TMDB
+	tmdbURL := fmt.Sprintf("https://api.themoviedb.org/3/trending/movie/week?api_key=%s&page=1", tmdbAPIKey)
+	resp, err := http.Get(tmdbURL)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	defer resp.Body.Close()
+	var tmdbResp TMDBResponse
+	if err := json.NewDecoder(resp.Body).Decode(&tmdbResp); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	results := []map[string]interface{}{}
+	max := 4
+	if len(tmdbResp.Results) < max {
+		max = len(tmdbResp.Results)
+	}
+	for i := 0; i < max; i++ {
+		movie := tmdbResp.Results[i]
+		title := movie.Title
+		if title == "" {
+			title = movie.Name
+		}
+		releaseDate := movie.ReleaseDate
+		if releaseDate == "" {
+			releaseDate = movie.FirstAirDate
+		}
+		// Search YouTube for trailer
+		query := fmt.Sprintf("%s %s official trailer", title, releaseDate[:4])
+		ytURL := fmt.Sprintf("https://www.googleapis.com/youtube/v3/search?part=snippet&q=%s&type=video&key=%s&maxResults=1", url.QueryEscape(query), youtubeAPIKey)
+		ytResp, err := http.Get(ytURL)
+		if err != nil {
+			continue
+		}
+		var ytData map[string]interface{}
+		if err := json.NewDecoder(ytResp.Body).Decode(&ytData); err != nil {
+			ytResp.Body.Close()
+			continue
+		}
+		ytResp.Body.Close()
+		videoId := ""
+		if items, ok := ytData["items"].([]interface{}); ok && len(items) > 0 {
+			id, ok := items[0].(map[string]interface{})["id"].(map[string]interface{})["videoId"].(string)
+			if ok {
+				videoId = id
+			}
+		}
+		results = append(results, map[string]interface{}{
+			"title":        title,
+			"poster_path":  movie.PosterPath,
+			"videoId":      videoId,
+			"release_date": releaseDate,
+			"overview":     movie.Overview,
+		})
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(results)
 }
