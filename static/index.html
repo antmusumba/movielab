@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MovieLab - Discover Amazing Movies & TV Shows</title>
+    <link rel="stylesheet" href="/static/styles.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-content">
+                <div class="logo">
+                    <i class="fas fa-film"></i>
+                    <h1>MovieLab</h1>
+                </div>
+                <nav class="nav">
+                    <button class="nav-btn active" data-section="trending">
+                        <i class="fas fa-fire"></i>
+                        Trending
+                    </button>
+                    <button class="nav-btn" data-section="search">
+                        <i class="fas fa-search"></i>
+                        Search
+                    </button>
+                    <button class="nav-btn" data-section="watchlist">
+                        <i class="fas fa-bookmark"></i>
+                        Watchlist
+                    </button>
+                    <button class="nav-btn" data-section="recommendations">
+                        <i class="fas fa-star"></i>
+                        Recommendations
+                    </button>
+                </nav>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Trending Section -->
+            <section id="trending" class="content-section active">
+                <div class="section-header">
+                    <h2>Trending Now</h2>
+                    <div class="filter-buttons">
+                        <button class="filter-btn active" data-type="movie">Movies</button>
+                        <button class="filter-btn" data-type="tv">TV Shows</button>
+                    </div>
+                </div>
+                <div class="movies-grid" id="trending-grid">
+                    <div class="loading">Loading trending content...</div>
+                </div>
+            </section>
+
+            <!-- Search Section -->
+            <section id="search" class="content-section">
+                <div class="search-container">
+                    <div class="search-box">
+                        <i class="fas fa-search search-icon"></i>
+                        <input type="text" id="search-input" placeholder="Search for movies, TV shows, actors...">
+                        <button id="search-btn" class="search-btn">
+                            <i class="fas fa-search"></i>
+                        </button>
+                    </div>
+                    <div class="search-filters">
+                        <select id="genre-filter">
+                            <option value="">All Genres</option>
+                        </select>
+                        <select id="year-filter">
+                            <option value="">All Years</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="movies-grid" id="search-results">
+                    <div class="search-placeholder">
+                        <i class="fas fa-search"></i>
+                        <p>Search for your favorite movies and TV shows</p>
+                    </div>
+                </div>
+                <div class="pagination" id="search-pagination"></div>
+            </section>
+
+            <!-- Watchlist Section -->
+            <section id="watchlist" class="content-section">
+                <div class="section-header">
+                    <h2>My Watchlist</h2>
+                    <button id="clear-watchlist" class="clear-btn">
+                        <i class="fas fa-trash"></i>
+                        Clear All
+                    </button>
+                </div>
+                <div class="movies-grid" id="watchlist-grid">
+                    <div class="empty-watchlist">
+                        <i class="fas fa-bookmark"></i>
+                        <p>Your watchlist is empty</p>
+                        <p>Add movies and TV shows to keep track of what you want to watch</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Recommendations Section -->
+            <section id="recommendations" class="content-section">
+                <div class="section-header">
+                    <h2>Recommended for You</h2>
+                    <p class="section-subtitle">Based on your watchlist preferences</p>
+                </div>
+                <div class="movies-grid" id="recommendations-grid">
+                    <div class="loading">Loading recommendations...</div>
+                </div>
+            </section>
+        </main>
+
+        <!-- Movie Detail Modal -->
+        <div id="movie-modal" class="modal">
+            <div class="modal-content">
+                <span class="close">&times;</span>
+                <div id="movie-detail-content">
+                    <div class="loading">Loading movie details...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Loading Overlay -->
+        <div id="loading-overlay" class="loading-overlay">
+            <div class="spinner"></div>
+        </div>
+    </div>
+
+    <script src="/static/app.js"></script>
+</body>
+</html> 
