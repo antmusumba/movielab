@@ -39,6 +39,7 @@ function setupEventListeners() {
     // Search 
     searchInput.addEventListener('input', handleSearchInput);
     searchBtn.addEventListener('click', performSearch);
+    
 
     // Modal
     closeModal.addEventListener('click', closeMovieModal);
