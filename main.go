@@ -16,6 +16,7 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
+// Movie represents a movie or TV show from TMDB
 type Movie struct {
 	ID          int     `json:"id"`
 	Title       string  `json:"title"`
@@ -27,6 +28,7 @@ type Movie struct {
 	Type        string  `json:"type"` // movie or tv
 }
 
+// WatchlistItem represents an item in the user's watchlist
 type WatchlistItem struct {
 	ID         int    `json:"id"`
 	MovieID    int    `json:"movie_id"`
@@ -36,6 +38,7 @@ type WatchlistItem struct {
 	PosterPath string `json:"poster_path"`
 }
 
+// TMDBResponse represents the structure of a TMDB API response
 type TMDBResponse struct {
 	Results []struct {
 		ID           int     `json:"id"`
@@ -52,6 +55,7 @@ type TMDBResponse struct {
 	TotalPages int `json:"total_pages"`
 }
 
+// OMDBResponse represents the structure of an OMDB API response
 type OMDBResponse struct {
 	Title          string `json:"Title"`
 	Year           string `json:"Year"`
@@ -66,6 +70,7 @@ var (
 	omdbAPIKey string
 )
 
+// init loads API keys from environment variables
 func init() {
 	tmdbAPIKey = os.Getenv("TMDB_API_KEY")
 	omdbAPIKey = os.Getenv("OMDB_API_KEY")
@@ -78,6 +83,7 @@ func init() {
 	}
 }
 
+// initDB initializes the SQLite database and creates tables if they don't exist
 func initDB() {
 	var err error
 	db, err = sql.Open("sqlite3", "./movielab.db")
@@ -85,7 +91,7 @@ func initDB() {
 		log.Fatal(err)
 	}
 
-	// Create tables
+	// Create tables for watchlist and user preferences
 	createTables := `
 	CREATE TABLE IF NOT EXISTS watchlist (
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -128,7 +134,7 @@ func main() {
 	r.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
 	r.HandleFunc("/", homeHandler).Methods("GET")
 
-	// CORS middleware
+	// CORS middleware for cross-origin requests
 	corsMiddleware := handlers.CORS(
 		handlers.AllowedOrigins([]string{"*"}),
 		handlers.AllowedMethods([]string{"GET", "POST", "PUT", "DELETE", "OPTIONS"}),
@@ -139,10 +145,12 @@ func main() {
 	log.Fatal(http.ListenAndServe(":8080", corsMiddleware(r)))
 }
 
+// homeHandler serves the main HTML page
 func homeHandler(w http.ResponseWriter, r *http.Request) {
 	http.ServeFile(w, r, "static/index.html")
 }
 
+// searchHandler handles searching for movies/TV shows via TMDB API
 func searchHandler(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query().Get("q")
 	page := r.URL.Query().Get("page")
@@ -177,7 +185,7 @@ func searchHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Transform results
+	// Transform TMDB results to Movie structs
 	var movies []Movie
 	for _, result := range tmdbResp.Results {
 		title := result.Title
@@ -207,6 +215,7 @@ func searchHandler(w http.ResponseWriter, r *http.Request) {
 		movies = append(movies, movie)
 	}
 
+	// Respond with search results
 	response := map[string]interface{}{
 		"results":     movies,
 		"total_pages": tmdbResp.TotalPages,
@@ -217,6 +226,7 @@ func searchHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(response)
 }
 
+// trendingHandler returns trending movies or TV shows from TMDB
 func trendingHandler(w http.ResponseWriter, r *http.Request) {
 	mediaType := r.URL.Query().Get("type")
 	if mediaType == "" {
@@ -272,6 +282,7 @@ func trendingHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(movies)
 }
 
+// movieDetailHandler returns detailed info for a specific movie, merging TMDB and OMDB data
 func movieDetailHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	movieID := vars["id"]
@@ -322,9 +333,11 @@ func movieDetailHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(movieDetail)
 }
 
+// watchlistHandler handles GET, POST, and DELETE for the user's watchlist
 func watchlistHandler(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case "GET":
+		// Return all watchlist items
 		rows, err := db.Query("SELECT id, movie_id, title, watched, added_at, poster_path FROM watchlist ORDER BY added_at DESC")
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -346,6 +359,7 @@ func watchlistHandler(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(items)
 
 	case "POST":
+		// Add a new item to the watchlist
 		var item WatchlistItem
 		if err := json.NewDecoder(r.Body).Decode(&item); err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
@@ -377,12 +391,14 @@ func watchlistHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// watchlistItemHandler handles updating or deleting a specific watchlist item
 func watchlistItemHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id := vars["id"]
 
 	switch r.Method {
 	case "PUT":
+		// Update watched status of a watchlist item
 		var item WatchlistItem
 		if err := json.NewDecoder(r.Body).Decode(&item); err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
@@ -398,6 +414,7 @@ func watchlistItemHandler(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 
 	case "DELETE":
+		// Delete a watchlist item by ID
 		_, err := db.Exec("DELETE FROM watchlist WHERE id = ?", id)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -407,6 +424,7 @@ func watchlistItemHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// recommendationsHandler returns movie recommendations based on the user's watchlist
 func recommendationsHandler(w http.ResponseWriter, r *http.Request) {
 	// Get user's watchlist to generate recommendations
 	rows, err := db.Query("SELECT movie_id FROM watchlist LIMIT 5")
