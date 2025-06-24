@@ -79,6 +79,9 @@ function switchSection(sectionName) {
         case 'trending':
             loadTrendingContent();
             break;
+        case 'trending-trailers':
+            loadTrendingTrailers();
+            break;
         case 'search':
             // Search section is already loaded
             break;
@@ -481,6 +484,10 @@ function displayMovieDetails(movie) {
         `;
     }
 
+    // Trailer placeholder
+    let trailerHTML = '<div class="loading" id="trailer-loading">Loading trailer...</div>';
+
+    // Render modal content (trailer will be replaced after fetch)
     modalContent.innerHTML = `
         <div class="movie-detail">
             <img src="${posterUrl}" alt="${movie.title}" class="movie-detail-poster" onerror="this.src='/static/placeholder-poster.jpg'">
@@ -501,6 +508,9 @@ function displayMovieDetails(movie) {
                     </div>
                 </div>
                 ${genres ? `<div class="meta-item"><i class="fas fa-tags"></i><span>${genres}</span></div>` : ''}
+                <div id="trailer-section">
+                    ${trailerHTML}
+                </div>
                 <div class="movie-detail-overview">
                     <h3>Overview</h3>
                     <p>${movie.overview || 'No overview available.'}</p>
@@ -525,6 +535,26 @@ function displayMovieDetails(movie) {
             </div>
         </div>
     `;
+
+    // Fetch and display trailer
+    fetch(`/api/trailer?title=${encodeURIComponent(movie.title)}&year=${movie.release_date ? movie.release_date.substring(0,4) : ''}`)
+        .then(res => res.ok ? res.json() : null)
+        .then(data => {
+            const trailerSection = document.getElementById('trailer-section');
+            if (data && data.videoId) {
+                trailerSection.innerHTML = `
+                    <div class="trailer-embed">
+                        <iframe width="100%" height="315" src="https://www.youtube.com/embed/${data.videoId}" frameborder="0" allowfullscreen></iframe>
+                    </div>
+                `;
+            } else {
+                trailerSection.innerHTML = `<div class="loading">Trailer not found.</div>`;
+            }
+        })
+        .catch(() => {
+            const trailerSection = document.getElementById('trailer-section');
+            trailerSection.innerHTML = `<div class="loading">Trailer not found.</div>`;
+        });
 }
 
 function closeMovieModal() {
@@ -620,4 +650,42 @@ style.textContent = `
         to { transform: translateX(100%); opacity: 0; }
     }
 `;
-document.head.appendChild(style); 
+document.head.appendChild(style);
+
+function loadTrendingTrailers() {
+    showLoading('#trending-trailers-grid');
+    fetch('/api/trending-trailers')
+        .then(res => res.json())
+        .then(trailers => {
+            displayTrendingTrailers(trailers);
+        })
+        .catch(error => {
+            showError('#trending-trailers-grid', 'Failed to load trending trailers.');
+        });
+}
+
+function displayTrendingTrailers(trailers) {
+    const container = document.getElementById('trending-trailers-grid');
+    if (!trailers || trailers.length === 0) {
+        container.innerHTML = `<div class="loading">No trending trailers found.</div>`;
+        return;
+    }
+    container.innerHTML = trailers.map(trailer => {
+        const posterUrl = trailer.poster_path
+            ? `https://image.tmdb.org/t/p/w500${trailer.poster_path}`
+            : '/static/placeholder-poster.jpg';
+        return `
+            <div class="trailer-card">
+                <img src="${posterUrl}" alt="${trailer.title}" class="trailer-poster" onerror="this.src='/static/placeholder-poster.jpg'">
+                <div class="trailer-info">
+                    <h3 class="trailer-title">${trailer.title}</h3>
+                    <div class="trailer-meta">${trailer.release_date ? formatDate(trailer.release_date) : ''}</div>
+                    <div class="trailer-overview">${truncateText(trailer.overview, 120)}</div>
+                </div>
+                <div class="trailer-embed">
+                    ${trailer.videoId ? `<iframe src="https://www.youtube.com/embed/${trailer.videoId}" frameborder="0" allowfullscreen></iframe>` : '<div class="loading">Trailer not found.</div>'}
+                </div>
+            </div>
+        `;
+    }).join('');
+} 
