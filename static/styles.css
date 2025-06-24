@@ -667,4 +667,67 @@ body {
     border-radius: 15px;
     font-size: 0.8rem;
     font-weight: 600;
+}
+
+.trailers-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+    gap: 2rem;
+    margin-bottom: 2rem;
+}
+
+.trailer-card {
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 15px;
+    overflow: hidden;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+    transition: all 0.3s ease;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    min-height: 500px;
+}
+
+.trailer-embed iframe {
+    width: 100%;
+    height: 250px;
+    border-radius: 0 0 10px 10px;
+    display: block;
+}
+
+.trailer-info {
+    padding: 1.5rem;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+}
+
+.trailer-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    color: #333;
+    line-height: 1.3;
+}
+
+.trailer-meta {
+    font-size: 0.9rem;
+    color: #666;
+    margin-bottom: 0.5rem;
+}
+
+.trailer-overview {
+    font-size: 0.95rem;
+    color: #555;
+    margin-bottom: 0.5rem;
+    line-height: 1.5;
+}
+
+.trailer-poster {
+    width: 100%;
+    height: 200px;
+    object-fit: cover;
+    border-radius: 10px 10px 0 0;
+    display: block;
 } 
