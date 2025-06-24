@@ -168,7 +168,7 @@ func searchHandler(w http.ResponseWriter, r *http.Request) {
 
 	resp, err := http.Get(url)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		// http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	defer resp.Body.Close()
