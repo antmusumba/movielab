@@ -36,7 +36,7 @@ function setupEventListeners() {
         btn.addEventListener('click', () => switchSection(btn.dataset.section));
     });
 
-    // Search functionality
+    // Search 
     searchInput.addEventListener('input', handleSearchInput);
     searchBtn.addEventListener('click', performSearch);
 
